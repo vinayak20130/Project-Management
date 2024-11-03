@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { error, log } from 'console';
-import { create } from 'domain';
-import { json, Request, Response } from 'express';
+import {Request, Response } from 'express';
 import bcrypt from "bcryptjs";
+import jwt, { sign } from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
@@ -47,6 +46,69 @@ export const signup = async(req:Request, res:Response)=>{
             message : 'User created successfully',
             success : true,
         });
+    } catch (error) {
+        console.log(error);
+        
+    }
+}
+
+export const login = async(req:Request , res:Response)=>{
+    try {
+        const {email, password} = req.body;
+
+        if(!email || !password){
+            res.status(400).json({
+                message : "All fields are required",
+                success  :true,
+            });
+            return;
+        };
+
+        const user = await prisma.user.findUnique({
+            where : {
+                email : email,
+            },
+        });
+
+        if(!user){
+            res.status(400).json({
+                message : "User not exist with given email ",
+                success : false,
+            });
+            return;
+        }
+
+        const isPasswordMatched = bcrypt.compare(password, user.password);
+
+        if(!isPasswordMatched){
+            res.status(400).json({
+                message : "Incorrect password",
+                success : false,
+            });
+            return;
+        }
+
+        const tokenData = {
+            userId: user.id,
+        };
+        const secret_key = process.env.SECRET_KEY || '';
+        
+        const token = jwt.sign(tokenData, secret_key.toString(), {
+        expiresIn: "1d",
+        });
+
+
+        res.status(200).cookie("token", token, {
+            maxAge: 1 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            secure: true,
+          }).json({
+            message : `Welcome back ${user.name}`,
+            success : true,
+            user,
+          });
+
+
     } catch (error) {
         console.log(error);
         
