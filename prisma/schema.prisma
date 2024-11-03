@@ -12,3 +12,36 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id                 Int            @id @default(autoincrement())
+  name               String
+  email              String         @unique
+  password           String
+  skills             String?
+  githubUrl          String?        @map("github_url")
+  xUrl               String?        @map("x_url")
+  linkedInUrl        String?        @map("linkedin_url")
+  imageUrl           String?        @map("image_url") // For storing image URLs from Cloudinary
+  organizationId     Int?           @map("organization_id")
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
+  ownedOrganizations Organization[] @relation("UserOwnedOrganizations")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  estdDate  DateTime @map("estd_date") // Established Date
+  ownerId   Int      @map("owner_id")
+  owner     User     @relation("UserOwnedOrganizations", fields: [ownerId], references: [id])
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
